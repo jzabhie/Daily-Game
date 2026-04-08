@@ -96,27 +96,11 @@ ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/5
 
         <div className="rounded-3xl border border-white/10 bg-[#081626] p-5">
           <div className="text-sm uppercase tracking-[0.2em] text-slate-400">
-            Visual Type
+            Puzzle
           </div>
-          <div className="mt-2 text-3xl font-semibold text-white">
-            {puzzle.visualType}
+          <div className="mt-2 text-lg text-slate-200">
+            Think carefully and make your best guess.
           </div>
-          <p className="mt-4 text-slate-300">{puzzle.hint}</p>
-
-          {puzzle.type === "chart" && puzzle.chartMeta ? (
-            <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="text-sm text-slate-300">Chart display rule</div>
-              <div className="mt-2 text-slate-200">
-                X-axis: {puzzle.chartMeta.xAxis}
-              </div>
-              <div className="text-slate-200">
-                Y-axis: {puzzle.chartMeta.yAxis}
-              </div>
-              <div className="text-slate-200">
-                Trend style: {puzzle.chartMeta.trendStyle}
-              </div>
-            </div>
-          ) : null}
         </div>
 
         <div className="mt-5">
