@@ -19,15 +19,6 @@ export default function HomePage() {
                 Daily geography, events, flags, landmarks, and chart puzzle
               </div>
             </div>
-
-            <div className="flex items-center gap-4">
-              <a
-                href="/archive"
-                className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm hover:bg-white/20"
-              >
-                Archive
-              </a>
-            </div>
           </nav>
 
           <div className="mt-16 max-w-4xl">
@@ -58,7 +49,7 @@ export default function HomePage() {
 
             <div className="space-y-3 text-slate-300">
               <p>1. You get one puzzle per day.</p>
-              <p>2. Use the clue to guess the correct answer.</p>
+              <p>2. Use the question to guess the correct answer.</p>
               <p>3. You have 5 guesses.</p>
               <p>4. After solving, share your result.</p>
             </div>
