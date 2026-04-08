@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Share2, RotateCcw } from "lucide-react";
 
@@ -25,13 +25,6 @@ export default function GameClient({ puzzle }) {
   }, []);
 
   const normalizedAnswer = puzzle.answer.toLowerCase();
-
-  const filteredOptions = useMemo(() => {
-    if (!guess.trim()) return puzzle.options || [];
-    return (puzzle.options || []).filter((option) =>
-      option.toLowerCase().includes(guess.toLowerCase())
-    );
-  }, [guess, puzzle.options]);
 
   function submitGuess(value) {
     if (status !== "playing") return;
@@ -93,7 +86,7 @@ ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/5`;
       </div>
 
       <div className="mb-2 text-sm text-slate-400">
-        Enter a guess or tap an option.
+        Enter your guess below.
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -110,18 +103,6 @@ ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/5`;
         >
           Guess
         </button>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {(filteredOptions || []).map((option) => (
-          <button
-            key={option}
-            onClick={() => submitGuess(option)}
-            className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 hover:bg-white/10"
-          >
-            {option}
-          </button>
-        ))}
       </div>
 
       <div className="mt-6 grid gap-2">
