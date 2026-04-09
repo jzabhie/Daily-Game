@@ -12,6 +12,8 @@ function copyResult(text) {
 }
 
 export default function GameClient({ puzzle }) {
+  const MAX_GUESSES = 10;
+
   const [guess, setGuess] = useState("");
   const [guesses, setGuesses] = useState([]);
   const [status, setStatus] = useState("playing");
@@ -25,20 +27,19 @@ export default function GameClient({ puzzle }) {
   }, []);
 
   const normalizedAnswer = puzzle.answer.toLowerCase();
+  const accepted = puzzle.acceptedAnswers?.map((x) => x.toLowerCase()) || [];
+  const guessesLeft = MAX_GUESSES - guesses.length;
 
   function submitGuess(value) {
     if (status !== "playing") return;
 
     const entry = (value ?? guess).trim();
     if (!entry) return;
-    if (guesses.includes(entry)) return;
+    if (guesses.some((g) => g.toLowerCase() === entry.toLowerCase())) return;
 
     const next = [...guesses, entry];
     setGuesses(next);
     setGuess("");
-
-    const accepted =
-      puzzle.acceptedAnswers?.map((x) => x.toLowerCase()) || [];
 
     if (
       entry.toLowerCase() === normalizedAnswer ||
@@ -51,7 +52,7 @@ export default function GameClient({ puzzle }) {
       return;
     }
 
-    if (next.length >= 5) {
+    if (next.length >= MAX_GUESSES) {
       setStatus("lost");
       localStorage.setItem("signalSprintStreak", "0");
       setStreak(0);
@@ -65,7 +66,7 @@ export default function GameClient({ puzzle }) {
   }
 
   const shareText = `SignalSprint ${new Date().toISOString().slice(0, 10)}
-${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/5`;
+${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/${MAX_GUESSES}`;
 
   return (
     <div className="rounded-[28px] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl">
@@ -73,6 +74,15 @@ ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/5`;
         <div>
           <div className="text-sm text-slate-300">Today's puzzle</div>
           <h1 className="mt-1 text-2xl font-semibold">{puzzle.prompt}</h1>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-300">
+              Total guesses: {MAX_GUESSES}
+            </div>
+            <div className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-sm text-amber-200">
+              Guesses left: {guessesLeft}
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -96,10 +106,12 @@ ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/5`;
           value={guess}
           onChange={(e) => setGuess(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submitGuess()}
+          disabled={status !== "playing"}
         />
         <button
           onClick={() => submitGuess()}
-          className="h-12 rounded-2xl bg-white px-5 font-semibold text-slate-900"
+          disabled={status !== "playing"}
+          className="h-12 rounded-2xl bg-white px-5 font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Guess
         </button>
@@ -108,7 +120,10 @@ ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/5`;
       <div className="mt-6 grid gap-2">
         <AnimatePresence>
           {guesses.map((g, i) => {
-            const correct = g.toLowerCase() === normalizedAnswer;
+            const correct =
+              g.toLowerCase() === normalizedAnswer ||
+              accepted.includes(g.toLowerCase());
+
             return (
               <motion.div
                 key={g + i}
