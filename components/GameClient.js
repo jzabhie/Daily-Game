@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Share2, RotateCcw, Lightbulb } from "lucide-react";
 
@@ -11,6 +11,64 @@ function copyResult(text) {
   return Promise.resolve();
 }
 
+function formatLabel(value) {
+  if (!value) return "";
+  return String(value)
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function buildHints(puzzle) {
+  const hints = [];
+
+  if (puzzle?.hint) {
+    hints.push(puzzle.hint);
+  }
+
+  if (puzzle?.category) {
+    hints.push(`Category: ${formatLabel(puzzle.category)}`);
+  }
+
+  if (puzzle?.subcategory) {
+    hints.push(`Type: ${formatLabel(puzzle.subcategory)}`);
+  }
+
+  if (puzzle?.difficulty) {
+    hints.push(`Difficulty: ${formatLabel(puzzle.difficulty)}`);
+  }
+
+  if (puzzle?.mode) {
+    hints.push(`Mode: ${formatLabel(puzzle.mode)}`);
+  }
+
+  if (puzzle?.visualType) {
+    hints.push(`Visual clue: ${formatLabel(puzzle.visualType)}`);
+  }
+
+  if (puzzle?.answerGeo?.region) {
+    hints.push(`Region: ${puzzle.answerGeo.region}`);
+  }
+
+  if (Array.isArray(puzzle?.tags) && puzzle.tags.length > 0) {
+    hints.push(`Tags: ${puzzle.tags.slice(0, 3).map(formatLabel).join(", ")}`);
+  }
+
+  if (puzzle?.visualSpec?.assetPrompt) {
+    const cleanedPrompt = String(puzzle.visualSpec.assetPrompt)
+      .replace(/^clean\s+/i, "")
+      .replace(/,\s*no labels/gi, "")
+      .replace(/,\s*centered/gi, "")
+      .replace(/,\s*quiz style/gi, "")
+      .trim();
+
+    if (cleanedPrompt) {
+      hints.push(`Image hint: ${cleanedPrompt}`);
+    }
+  }
+
+  return [...new Set(hints)].slice(0, 4);
+}
+
 export default function GameClient({ puzzle }) {
   const MAX_GUESSES = 5;
 
@@ -19,6 +77,7 @@ export default function GameClient({ puzzle }) {
   const [status, setStatus] = useState("playing");
   const [streak, setStreak] = useState(0);
   const [showHint, setShowHint] = useState(false);
+  const [hintLevel, setHintLevel] = useState(1);
 
   useEffect(() => {
     const saved = localStorage.getItem("signalSprintStreak");
@@ -30,6 +89,19 @@ export default function GameClient({ puzzle }) {
   const normalizedAnswer = puzzle.answer.toLowerCase();
   const accepted = puzzle.acceptedAnswers?.map((x) => x.toLowerCase()) || [];
   const guessesLeft = MAX_GUESSES - guesses.length;
+  const hints = useMemo(() => buildHints(puzzle), [puzzle]);
+
+  useEffect(() => {
+    if (guesses.length >= 2) {
+      setShowHint(true);
+    }
+    if (guesses.length >= 2) {
+      setHintLevel(2);
+    }
+    if (guesses.length >= 4) {
+      setHintLevel(3);
+    }
+  }, [guesses.length]);
 
   function submitGuess(value) {
     if (status !== "playing") return;
@@ -65,13 +137,10 @@ export default function GameClient({ puzzle }) {
     setGuesses([]);
     setStatus("playing");
     setShowHint(false);
+    setHintLevel(1);
   }
 
-  const hintText =
-    puzzle.hint ||
-    puzzle.clue ||
-    puzzle.funFact ||
-    "No hint available for this puzzle.";
+  const visibleHints = hints.slice(0, hintLevel);
 
   const shareText = `SignalSprint ${new Date().toISOString().slice(0, 10)}
 ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/${MAX_GUESSES}`;
@@ -114,17 +183,28 @@ ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/${MAX_GUESSES}`;
             onClick={() => setShowHint((prev) => !prev)}
             className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-sm text-yellow-100"
           >
-            {showHint ? "Hide hint" : "Show hint"}
+            {showHint ? "Hide hints" : "Show hints"}
           </button>
         </div>
 
-        {showHint ? (
-          <p className="mt-3 text-sm leading-6 text-yellow-50">
-            {hintText}
-          </p>
-        ) : (
+        {!showHint ? (
           <p className="mt-3 text-sm text-slate-300">
-            Need help? Reveal a hint before using all 5 guesses.
+            Hints unlock naturally as the player uses more guesses. First extra hint appears after 2 guesses.
+          </p>
+        ) : visibleHints.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            {visibleHints.map((hint, index) => (
+              <div
+                key={`${hint}-${index}`}
+                className="rounded-xl border border-yellow-400/10 bg-black/10 px-3 py-2 text-sm text-yellow-50"
+              >
+                Hint {index + 1}: {hint}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-yellow-50">
+            No hint available for this puzzle.
           </p>
         )}
       </div>
@@ -190,7 +270,9 @@ ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/${MAX_GUESSES}`;
           <p className="mt-2 text-slate-200">
             Answer: <span className="font-semibold text-white">{puzzle.answer}</span>
           </p>
-          <p className="mt-2 text-slate-300">{puzzle.funFact}</p>
+          <p className="mt-2 text-slate-300">
+            {puzzle.funFact || "Come back tomorrow for a new puzzle."}
+          </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               onClick={() => copyResult(shareText)}
