@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, RotateCcw } from "lucide-react";
+import { Share2, RotateCcw, Lightbulb } from "lucide-react";
 
 function copyResult(text) {
   if (navigator?.clipboard?.writeText) {
@@ -12,12 +12,13 @@ function copyResult(text) {
 }
 
 export default function GameClient({ puzzle }) {
-  const MAX_GUESSES = 10;
+  const MAX_GUESSES = 5;
 
   const [guess, setGuess] = useState("");
   const [guesses, setGuesses] = useState([]);
   const [status, setStatus] = useState("playing");
   const [streak, setStreak] = useState(0);
+  const [showHint, setShowHint] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("signalSprintStreak");
@@ -63,7 +64,14 @@ export default function GameClient({ puzzle }) {
     setGuess("");
     setGuesses([]);
     setStatus("playing");
+    setShowHint(false);
   }
+
+  const hintText =
+    puzzle.hint ||
+    puzzle.clue ||
+    puzzle.funFact ||
+    "No hint available for this puzzle.";
 
   const shareText = `SignalSprint ${new Date().toISOString().slice(0, 10)}
 ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/${MAX_GUESSES}`;
@@ -93,6 +101,32 @@ ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/${MAX_GUESSES}`;
             {puzzle.category}
           </div>
         </div>
+      </div>
+
+      <div className="mb-4 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-yellow-200">
+            <Lightbulb className="h-4 w-4" />
+            <span className="font-medium">Hint section</span>
+          </div>
+
+          <button
+            onClick={() => setShowHint((prev) => !prev)}
+            className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-sm text-yellow-100"
+          >
+            {showHint ? "Hide hint" : "Show hint"}
+          </button>
+        </div>
+
+        {showHint ? (
+          <p className="mt-3 text-sm leading-6 text-yellow-50">
+            {hintText}
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-slate-300">
+            Need help? Reveal a hint before using all 5 guesses.
+          </p>
+        )}
       </div>
 
       <div className="mb-2 text-sm text-slate-400">
