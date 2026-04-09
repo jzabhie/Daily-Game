@@ -25,17 +25,181 @@ function buildHints(puzzle) {
   if (puzzle?.hint2) hints.push(puzzle.hint2);
   if (puzzle?.hint3) hints.push(puzzle.hint3);
 
-  if (!hints.length && puzzle?.category) {
-    hints.push(`Category: ${formatLabel(puzzle.category)}`);
+  if (!hints.length && puzzle?.subcategory) {
+    hints.push(`This puzzle belongs to ${formatLabel(puzzle.subcategory)}.`);
   }
-  if (hints.length < 2 && puzzle?.subcategory) {
-    hints.push(`Type: ${formatLabel(puzzle.subcategory)}`);
+  if (hints.length < 2 && puzzle?.answerGeo?.region) {
+    hints.push(`The answer is connected to ${puzzle.answerGeo.region}.`);
   }
-  if (hints.length < 3 && puzzle?.answerGeo?.region) {
-    hints.push(`Region: ${puzzle.answerGeo.region}`);
+  if (hints.length < 3 && Array.isArray(puzzle?.tags) && puzzle.tags.length) {
+    hints.push(`Related theme: ${puzzle.tags.slice(0, 2).map(formatLabel).join(", ")}.`);
   }
 
   return [...new Set(hints)].slice(0, 3);
+}
+
+function getChartPoints(trendStyle = "steady") {
+  if (trendStyle === "rising") return "8,78 28,72 48,61 68,50 88,34 108,24 128,14";
+  if (trendStyle === "falling") return "8,18 28,28 48,39 68,49 88,58 108,69 128,78";
+  if (trendStyle === "volatile") return "8,54 28,22 48,63 68,34 88,70 108,26 128,52";
+  return "8,62 28,58 48,55 68,49 88,45 108,40 128,36";
+}
+
+function VisualClue({ puzzle }) {
+  const visualType = puzzle?.visualType || puzzle?.type || "text";
+  const chartMeta = puzzle?.chartMeta || {};
+  const assetPrompt = puzzle?.visualSpec?.assetPrompt || "";
+
+  const isChart =
+    visualType === "chart" ||
+    visualType === "country-chart" ||
+    visualType === "chart-or-text-clue" ||
+    puzzle?.type === "chart";
+
+  const isMapLike =
+    visualType.includes("map") ||
+    visualType.includes("country") ||
+    visualType.includes("outline");
+
+  const isImageLike =
+    visualType.includes("image") ||
+    visualType.includes("lab") ||
+    visualType.includes("object");
+
+  if (isChart) {
+    const points = getChartPoints(chartMeta?.trendStyle);
+
+    return (
+      <div className="mb-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+              Visual clue
+            </div>
+            <div className="mt-1 text-lg font-semibold text-white">
+              Chart clue
+            </div>
+          </div>
+          <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+            {formatLabel(chartMeta?.trendStyle || "steady")} trend
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+          <svg viewBox="0 0 140 90" className="h-52 w-full">
+            <line x1="10" y1="80" x2="132" y2="80" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+            <line x1="10" y1="80" x2="10" y2="10" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
+
+            <line x1="10" y1="20" x2="132" y2="20" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+            <line x1="10" y1="40" x2="132" y2="40" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+            <line x1="10" y1="60" x2="132" y2="60" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+
+            <polyline
+              fill="none"
+              stroke="rgb(103 232 249)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              points={points}
+            />
+
+            {points.split(" ").map((pt, idx) => {
+              const [cx, cy] = pt.split(",");
+              return (
+                <circle
+                  key={idx}
+                  cx={cx}
+                  cy={cy}
+                  r="2.6"
+                  fill="rgb(34 211 238)"
+                />
+              );
+            })}
+          </svg>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">
+            <div>
+              <span className="text-slate-400">X-axis:</span>{" "}
+              {chartMeta?.xAxis || "Year"}
+            </div>
+            <div>
+              <span className="text-slate-400">Y-axis:</span>{" "}
+              {chartMeta?.yAxis || "Indicator"}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isMapLike) {
+    return (
+      <div className="mb-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl">
+        <div className="mb-4">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+            Visual clue
+          </div>
+          <div className="mt-1 text-lg font-semibold text-white">
+            Map / outline clue
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+          <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_60%)]">
+            <div className="max-w-md text-center text-slate-300">
+              <div className="text-base font-medium text-white">Visual map clue</div>
+              <div className="mt-2 text-sm leading-6">
+                {assetPrompt || "Country outline or geography silhouette appears here."}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isImageLike) {
+    return (
+      <div className="mb-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl">
+        <div className="mb-4">
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+            Visual clue
+          </div>
+          <div className="mt-1 text-lg font-semibold text-white">
+            Image clue
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+          <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))]">
+            <div className="max-w-md text-center text-slate-300">
+              <div className="text-base font-medium text-white">Image / lab-style clue</div>
+              <div className="mt-2 text-sm leading-6">
+                {assetPrompt || "An image clue appears here."}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl">
+      <div className="mb-4">
+        <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+          Visual clue
+        </div>
+        <div className="mt-1 text-lg font-semibold text-white">
+          Clue card
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-5 text-slate-300">
+        {assetPrompt || "A clue card appears here for this puzzle type."}
+      </div>
+    </div>
+  );
 }
 
 export default function GameClient({ puzzle }) {
@@ -128,11 +292,10 @@ ${status === "won" ? "Solved" : "Tried"} in ${guesses.length}/${MAX_GUESSES}`;
           <div className="rounded-full border border-orange-400/20 bg-orange-400/10 px-3 py-1 text-sm text-orange-200">
             🔥 Streak: {streak}
           </div>
-          <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-sm text-cyan-200">
-            {formatLabel(puzzle.category)}
-          </div>
         </div>
       </div>
+
+      <VisualClue puzzle={puzzle} />
 
       <div className="mb-2 text-sm text-slate-400">
         Enter your guess below.
