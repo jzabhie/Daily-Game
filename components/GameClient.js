@@ -15,6 +15,7 @@ function formatLabel(value) {
   if (!value) return "";
   return String(value)
     .replace(/-/g, " ")
+    .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -26,178 +27,177 @@ function buildHints(puzzle) {
   if (puzzle?.hint3) hints.push(puzzle.hint3);
 
   if (!hints.length && puzzle?.subcategory) {
-    hints.push(`This puzzle belongs to ${formatLabel(puzzle.subcategory)}.`);
+    hints.push(`This puzzle is a ${formatLabel(puzzle.subcategory)} clue.`);
   }
   if (hints.length < 2 && puzzle?.answerGeo?.region) {
     hints.push(`The answer is connected to ${puzzle.answerGeo.region}.`);
   }
   if (hints.length < 3 && Array.isArray(puzzle?.tags) && puzzle.tags.length) {
-    hints.push(`Related theme: ${puzzle.tags.slice(0, 2).map(formatLabel).join(", ")}.`);
+    hints.push(`Related tags: ${puzzle.tags.slice(0, 2).map(formatLabel).join(", ")}.`);
   }
 
   return [...new Set(hints)].slice(0, 3);
 }
 
 function getChartPoints(trendStyle = "steady") {
-  if (trendStyle === "rising") return "8,78 28,72 48,61 68,50 88,34 108,24 128,14";
-  if (trendStyle === "falling") return "8,18 28,28 48,39 68,49 88,58 108,69 128,78";
-  if (trendStyle === "volatile") return "8,54 28,22 48,63 68,34 88,70 108,26 128,52";
-  return "8,62 28,58 48,55 68,49 88,45 108,40 128,36";
+  switch (String(trendStyle).toLowerCase()) {
+    case "rising":
+      return "10,72 28,66 46,58 64,49 82,39 100,28 118,18";
+    case "falling":
+      return "10,18 28,28 46,37 64,47 82,56 100,65 118,73";
+    case "volatile":
+      return "10,48 28,24 46,61 64,34 82,69 100,26 118,50";
+    case "u-shaped":
+      return "10,24 28,37 46,54 64,67 82,55 100,39 118,23";
+    case "flat-then-jumping":
+      return "10,60 28,59 46,58 64,58 82,56 100,34 118,16";
+    case "flat":
+      return "10,48 28,48 46,47 64,48 82,47 100,48 118,47";
+    case "steady":
+    default:
+      return "10,55 28,53 46,51 64,49 82,47 100,45 118,43";
+  }
+}
+
+function MiniChart({ chartMeta }) {
+  const points = getChartPoints(chartMeta?.trendStyle);
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+      <svg viewBox="0 0 130 90" className="h-56 w-full">
+        <line x1="10" y1="80" x2="122" y2="80" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" />
+        <line x1="10" y1="80" x2="10" y2="10" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" />
+
+        <line x1="10" y1="20" x2="122" y2="20" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        <line x1="10" y1="40" x2="122" y2="40" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        <line x1="10" y1="60" x2="122" y2="60" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+
+        <polyline
+          fill="none"
+          stroke="rgb(34 211 238)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={points}
+        />
+
+        {points.split(" ").map((pt, idx) => {
+          const [cx, cy] = pt.split(",");
+          return <circle key={idx} cx={cx} cy={cy} r="2.7" fill="rgb(103 232 249)" />;
+        })}
+      </svg>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">
+        <div>
+          <span className="text-slate-400">X-axis:</span> {chartMeta?.xAxis || "Year"}
+        </div>
+        <div>
+          <span className="text-slate-400">Y-axis:</span> {chartMeta?.yAxis || "Indicator"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MapCard({ puzzle }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+      <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_60%)] px-6 text-center">
+        <div>
+          <div className="text-lg font-semibold text-white">Map / outline clue</div>
+          <div className="mt-3 text-sm leading-6 text-slate-300">
+            {puzzle?.visualSpec?.assetPrompt || "A map or outline clue appears here."}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImageCard({ puzzle }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+      <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] px-6 text-center">
+        <div>
+          <div className="text-lg font-semibold text-white">Image / lab clue</div>
+          <div className="mt-3 text-sm leading-6 text-slate-300">
+            {puzzle?.visualSpec?.assetPrompt || "An image clue appears here."}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TextClueCard({ puzzle }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+      <div className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center text-slate-300">
+        {puzzle?.visualSpec?.assetPrompt || "A clue card appears here for this puzzle."}
+      </div>
+    </div>
+  );
 }
 
 function VisualClue({ puzzle }) {
-  const visualType = puzzle?.visualType || puzzle?.type || "text";
-  const chartMeta = puzzle?.chartMeta || {};
+  const visualType = String(puzzle?.visualType || "").toLowerCase();
+  const subcategory = String(puzzle?.subcategory || "").toLowerCase();
   const assetPrompt = puzzle?.visualSpec?.assetPrompt || "";
+  const tags = Array.isArray(puzzle?.tags) ? puzzle.tags.map((t) => String(t).toLowerCase()) : [];
 
   const isChart =
-    visualType === "chart" ||
-    visualType === "country-chart" ||
-    visualType === "chart-or-text-clue" ||
-    puzzle?.type === "chart";
+    visualType.includes("chart") ||
+    subcategory.includes("chart") ||
+    tags.includes("chart") ||
+    Boolean(puzzle?.chartMeta);
 
-  const isMapLike =
+  const isMap =
     visualType.includes("map") ||
-    visualType.includes("country") ||
-    visualType.includes("outline");
+    visualType.includes("outline") ||
+    subcategory.includes("country-outline") ||
+    assetPrompt.toLowerCase().includes("outline map");
 
-  const isImageLike =
+  const isImage =
     visualType.includes("image") ||
     visualType.includes("lab") ||
-    visualType.includes("object");
-
-  if (isChart) {
-    const points = getChartPoints(chartMeta?.trendStyle);
-
-    return (
-      <div className="mb-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Visual clue
-            </div>
-            <div className="mt-1 text-lg font-semibold text-white">
-              Chart clue
-            </div>
-          </div>
-          <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
-            {formatLabel(chartMeta?.trendStyle || "steady")} trend
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-          <svg viewBox="0 0 140 90" className="h-52 w-full">
-            <line x1="10" y1="80" x2="132" y2="80" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-            <line x1="10" y1="80" x2="10" y2="10" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-
-            <line x1="10" y1="20" x2="132" y2="20" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-            <line x1="10" y1="40" x2="132" y2="40" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-            <line x1="10" y1="60" x2="132" y2="60" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-
-            <polyline
-              fill="none"
-              stroke="rgb(103 232 249)"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              points={points}
-            />
-
-            {points.split(" ").map((pt, idx) => {
-              const [cx, cy] = pt.split(",");
-              return (
-                <circle
-                  key={idx}
-                  cx={cx}
-                  cy={cy}
-                  r="2.6"
-                  fill="rgb(34 211 238)"
-                />
-              );
-            })}
-          </svg>
-
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">
-            <div>
-              <span className="text-slate-400">X-axis:</span>{" "}
-              {chartMeta?.xAxis || "Year"}
-            </div>
-            <div>
-              <span className="text-slate-400">Y-axis:</span>{" "}
-              {chartMeta?.yAxis || "Indicator"}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isMapLike) {
-    return (
-      <div className="mb-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl">
-        <div className="mb-4">
-          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-            Visual clue
-          </div>
-          <div className="mt-1 text-lg font-semibold text-white">
-            Map / outline clue
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-          <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_60%)]">
-            <div className="max-w-md text-center text-slate-300">
-              <div className="text-base font-medium text-white">Visual map clue</div>
-              <div className="mt-2 text-sm leading-6">
-                {assetPrompt || "Country outline or geography silhouette appears here."}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isImageLike) {
-    return (
-      <div className="mb-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl">
-        <div className="mb-4">
-          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-            Visual clue
-          </div>
-          <div className="mt-1 text-lg font-semibold text-white">
-            Image clue
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-          <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))]">
-            <div className="max-w-md text-center text-slate-300">
-              <div className="text-base font-medium text-white">Image / lab-style clue</div>
-              <div className="mt-2 text-sm leading-6">
-                {assetPrompt || "An image clue appears here."}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    visualType.includes("object") ||
+    assetPrompt.toLowerCase().includes("diagram") ||
+    assetPrompt.toLowerCase().includes("lab");
 
   return (
     <div className="mb-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl">
-      <div className="mb-4">
-        <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-          Visual clue
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+            Visual clue
+          </div>
+          <div className="mt-1 text-lg font-semibold text-white">
+            {isChart
+              ? "Chart clue"
+              : isMap
+              ? "Map / outline clue"
+              : isImage
+              ? "Image clue"
+              : "Clue card"}
+          </div>
         </div>
-        <div className="mt-1 text-lg font-semibold text-white">
-          Clue card
-        </div>
+
+        {isChart && (
+          <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+            {formatLabel(puzzle?.chartMeta?.trendStyle || "trend")}
+          </div>
+        )}
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-5 text-slate-300">
-        {assetPrompt || "A clue card appears here for this puzzle type."}
-      </div>
+      {isChart ? (
+        <MiniChart chartMeta={puzzle?.chartMeta} />
+      ) : isMap ? (
+        <MapCard puzzle={puzzle} />
+      ) : isImage ? (
+        <ImageCard puzzle={puzzle} />
+      ) : (
+        <TextClueCard puzzle={puzzle} />
+      )}
     </div>
   );
 }
